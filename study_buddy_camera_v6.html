@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study Buddy</title>
+<style>
+:root{--bg:#0c1a22;--card:#12252e;--card2:#173039;--line:#244552;--text:#e9f4f2;--muted:#93b3ae;--mint:#4fd1b5;--sky:#6ab7ff;--violet:#b39cff;--amber:#f6c453;--coral:#ff6b57}
+*{box-sizing:border-box}
+body{--accent:var(--mint);margin:0;min-height:100vh;color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;line-height:1.5;background:radial-gradient(1100px 520px at 85% -10%,#17454d 0,transparent 60%),var(--bg)}
+body[data-phase="idle"]{--accent:#6b8d95}
+body[data-phase="eye"]{--accent:var(--sky)}
+body[data-phase="relax"]{--accent:var(--violet)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:20px clamp(16px,4vw,40px)}
+.brand{display:flex;align-items:center;gap:10px;font:700 1.3rem "Trebuchet MS","Segoe UI",sans-serif}
+.mark{width:22px;height:22px;border-radius:50%;border:5px solid var(--mint);border-right-color:transparent}
+.hint{color:var(--muted);font-size:.9rem}
+.grid,.cards{display:grid;gap:20px;max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,40px) 20px}
+.grid{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.cards{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,var(--card),#0f2129);border:1px solid var(--line);border-radius:20px;padding:18px}
+.stage{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:4/3;background:#07131a;border:1px solid var(--line)}
+video,canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.banner{position:absolute;left:0;right:0;bottom:0;padding:12px;text-align:center;color:#fff;background:rgba(255,107,87,.93);font:700 clamp(1.1rem,2.6vw,1.7rem) "Trebuchet MS",sans-serif}
+.banner[hidden]{display:none}
+.metrics{margin:10px 2px 0;color:var(--muted);font:.8rem Consolas,monospace}
+.phase{margin:0;text-align:center;font-weight:600;color:var(--accent);letter-spacing:.02em}
+.ring{position:relative;width:min(250px,68vw);aspect-ratio:1;margin:8px auto 12px}
+.ring svg{width:100%;height:100%}
+.track{fill:none;stroke:var(--line);stroke-width:9}
+.fg{fill:none;stroke:var(--accent);stroke-width:9;stroke-linecap:round;stroke-dasharray:565.5;stroke-dashoffset:565.5;transition:stroke-dashoffset .25s linear,stroke .3s}
+.center{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.time{margin:0;font:700 clamp(3rem,9vw,4.2rem)/1 "Trebuchet MS",sans-serif}
+.unit{margin:4px 0 0;color:var(--muted);font-size:.85rem}
+.bubble{min-height:3.4rem;padding:12px 16px;text-align:center;background:var(--card2);border:1px solid var(--line);border-radius:14px;font-size:1.05rem}
+.actions{display:grid;gap:10px;margin-top:16px}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.row>button{flex:1}
+button{font:inherit;font-weight:600;padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.main{padding:13px;font-size:1.05rem;background:var(--accent);border-color:var(--accent);color:#06211c}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+details summary{cursor:pointer;font-weight:600;font-size:1.05rem}
+details[open] summary{margin-bottom:12px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fields label{display:flex;flex-direction:column;font-size:.8rem;color:var(--muted)}
+input[type=number],input[type=date],input[type=time],select{font:inherit;width:100%;padding:7px 9px;color:var(--text);background:#0c1a22;border:1px solid var(--line);border-radius:10px}
+input[type=checkbox]{accent-color:var(--mint)}
+.checks label{display:block;margin:5px 0}
+.sum{margin:10px 0 0;font-size:.82rem;color:var(--muted)}
+.rep{margin:0}
+.rep div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)}
+.rep dt{color:var(--muted)}
+.rep dd{margin:0;font-weight:700}
+.note{max-width:1200px;margin:0 auto;padding:6px clamp(16px,4vw,40px) 28px;color:var(--muted);font-size:.85rem}
+.banner.phone{top:0;bottom:auto;background:rgba(246,196,83,.96);color:#2b2100}
+.srow{display:grid;grid-template-columns:3.2rem 1fr 4.6rem;gap:8px;align-items:center;font-size:.85rem;padding:3px 0}
+.bar{display:block;height:10px;background:var(--line);border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%}
+.bar .ok{background:var(--mint)}.bar .low{background:var(--amber)}.bar .high{background:var(--sky)}
+.sres{margin:12px 0 0;font-size:.92rem}
+</style>
+</head>
+<body data-phase="idle">
+<header class="top">
+  <div class="brand"><span class="mark"></span>Study Buddy</div>
+  <div class="hint">Space = start / stop</div>
+</header>
+<main class="grid">
+  <section class="card">
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div id="banner" class="banner" hidden>CHANGE IN THE POSTER !</div>
+      <div id="phoneBanner" class="banner phone" hidden>PHONE DETECTED. PUT IT AWAY!</div>
+    </div>
+    <p class="metrics" id="metrics">Camera is off.</p>
+  </section>
+  <section class="card" aria-live="polite">
+    <p class="phase" id="phase">Camera off</p>
+    <div class="ring">
+      <svg viewBox="0 0 200 200"><circle class="track" cx="100" cy="100" r="90"/><circle id="ringFg" class="fg" cx="100" cy="100" r="90" transform="rotate(-90 100 100)"/></svg>
+      <div class="center"><p class="time" id="time">--</p><p class="unit">seconds left</p></div>
+    </div>
+    <div class="bubble" id="bubble">Click Start camera, sit straight for 3 seconds, then press Button 2 (or the Space bar).</div>
+    <div class="actions">
+      <button id="study" class="main">Start / stop study</button>
+      <div class="row">
+        <button id="cam">Start camera</button>
+        <button id="calib">Calibrate</button>
+        <button id="board">Connect board</button>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="cards">
+  <details class="card" open>
+    <summary>Timing (seconds)</summary>
+    <div class="fields">
+      <label>Study time <input id="tStudy" type="number" min="1" step="any" value="15"></label>
+      <label>Eye break starts at <input id="tEyeAt" type="number" min="0" step="any" value="5"></label>
+      <label>Eye break lasts (0 = none) <input id="tEyeLen" type="number" min="0" step="any" value="3"></label>
+      <label>Relax time <input id="tRelax" type="number" min="1" step="any" value="10"></label>
+      <label>Drink water every (0 = off) <input id="tWater" type="number" min="0" step="any" value="0"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="preDemo">Demo: 15 s</button>
+      <button id="preReal">Real: 25 min</button>
+    </div>
+    <p class="sum" id="timeMsg"></p>
+  </details>
+  <details class="card" open>
+    <summary>Sound</summary>
+    <div class="checks">
+      <label><input type="checkbox" id="speak" checked> Speak the messages</label>
+      <label><input type="checkbox" id="beep" checked> Beep before the voice</label>
+      <label><input type="checkbox" id="sitvoice" checked> Warn "Please sit straight" when posture changes</label>
+      <label><input type="checkbox" id="boardsound" checked> Play on the speaker on the board</label>
+      <label><input type="checkbox" id="stretchOn" checked> Stretch reminder in the relax time</label>
+      <label><input type="checkbox" id="phoneOn" checked> Warn when the camera sees a phone</label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <select id="voice" aria-label="Voice"></select>
+      <button id="test">Test sound</button>
+    </div>
+    <p class="sum" id="voiceMsg"></p>
+    <p class="sum" id="phoneMsg">Phone check starts with the camera.</p>
+  </details>
+  <details class="card" open>
+    <summary>Health report</summary>
+    <dl class="rep">
+      <div><dt>Good posture time</dt><dd id="rGood">--</dd></div>
+      <div><dt>Posture warnings</dt><dd id="rWarn">0</dd></div>
+      <div><dt>Best good-posture streak</dt><dd id="rStreak">0</dd></div>
+      <div><dt>Study sessions finished</dt><dd id="rSess">0</dd></div>
+      <div><dt>Water reminders</dt><dd id="rWater">0</dd></div>
+      <div><dt>Stretch reminders</dt><dd id="rStretch">0</dd></div>
+      <div><dt>Phone warnings</dt><dd id="rPhone">0</dd></div>
+    </dl>
+    <div class="row" style="margin-top:12px"><button id="rReset">Reset report</button></div>
+  </details>
+  <details class="card" open>
+    <summary>Sleep analysis</summary>
+    <div class="fields">
+      <label>Age group <select id="sAge"><option value="adult">18 or older (7-9 h)</option><option value="teen">14 to 17 (8-10 h)</option></select></label>
+      <label>Night of <input id="sDate" type="date"></label>
+      <label>Went to bed <input id="sBed" type="time" value="23:00"></label>
+      <label>Woke up <input id="sWake" type="time" value="06:30"></label>
+    </div>
+    <div class="row" style="margin-top:12px"><button id="sAdd">Add this night</button><button id="sClear">Clear</button></div>
+    <div id="sList" style="margin-top:12px"></div>
+    <p class="sres" id="sResult">Add last night's sleep to see your analysis.</p>
+  </details>
+</div>
+<p class="note">Open this file in Chrome or Edge with internet on (it loads the pose and phone models). Sit so your head and both shoulders are visible, and calibrate while sitting straight. Sound plays on your laptop and, after Connect board, on the speaker on the board.</p>
+<script type="module">
+const $ = id => document.getElementById(id);
+const video = $("video"), overlay = $("overlay"), ctx = overlay.getContext("2d");
+const TH = {scale: 1.15, neck: 0.80, tilt: 8, side: 0.25, holdMs: 1000};
+const LIB = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const OBJ_MODEL = "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite";
+const MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const BEEPS = {study: [660, 880], eye: [880, 880], eyeover: [880, 660], relax: [880, 660, 523], sit: [440, 440], water: [784, 784], stretch: [523, 659], phone: [988, 740, 988]};
+const TRACKS = {study: 1, eye: 2, eyeover: 3, relax: 4, sit: 5, water: 6, stretch: 7, phone: 8};
+const CFG_IDS = ["tStudy", "tEyeAt", "tEyeLen", "tRelax", "tWater"];
+
+let landmarker = null, base = null, samples = [], calibUntil = 0;
+let phase = "idle", t0 = 0, eyeDone = false, onEye = false, eyeEnd = 0;
+let badSince = 0, lastSit = 0, lastT = 0;
+let cur = {study: 15, eyeAt: 5, eyeLen: 3, relax: 10, water: 0};
+let nextWater = 0, wasShown = false, lastSample = 0;
+let objDetector = null, phoneSince = 0, lastPhoneWarn = 0, lastObj = 0, phoneBox = null;
+const stats = {goodMs: 0, badMs: 0, streak: 0, best: 0, warnings: 0, sessions: 0, water: 0, stretch: 0, phone: 0};
+let voices = [], audioCtx = null, lastUtter = null, writer = null;
+
+/* ---------- sound ---------- */
+function loadVoices() {
+  if (!("speechSynthesis" in window)) { $("voiceMsg").textContent = "This browser has no speech. Beeps will be used."; return; }
+  voices = speechSynthesis.getVoices();
+  $("voice").innerHTML = voices.map(v => "<option>" + v.name + "</option>").join("");
+  const en = voices.find(v => v.lang.startsWith("en"));
+  if (en) $("voice").value = en.name;
+  $("voiceMsg").textContent = voices.length ? voices.length + " voices found." : "No voices found yet. Beeps will still play.";
+}
+if ("speechSynthesis" in window) { speechSynthesis.onvoiceschanged = loadVoices; }
+loadVoices();
+
+function beep(kind) {
+  const notes = BEEPS[kind] || BEEPS.study;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    let t = audioCtx.currentTime + 0.02;
+    for (const f of notes) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.5, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t + 0.22);
+      t += 0.22;
+    }
+  } catch (e) {}
+  return notes.length * 220 + 40;
+}
+
+function boardPlay(kind) {
+  if (!writer || !$("boardsound").checked) return;
+  writer.write(new TextEncoder().encode("PLAY " + TRACKS[kind] + "\n")).catch(() => {});
+}
+
+function say(text, kind) {
+  $("bubble").textContent = text;
+  boardPlay(kind);
+  const wait = $("beep").checked ? beep(kind) : 80;
+  if (!$("speak").checked || !("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(text);
+    const v = voices.find(x => x.name === $("voice").value);
+    if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "en-US"; }
+    u.rate = 0.95; u.volume = 1;
+    lastUtter = u;                       // keep a reference so the browser does not drop it
+    speechSynthesis.speak(u);
+  }, wait);
+}
+
+/* ---------- timing settings ---------- */
+function label(s) {
+  s = Math.round(s);
+  return s >= 60 ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + " min" : s + " s";
+}
+function fmt(s) {
+  s = Math.max(0, Math.ceil(s));
+  return s >= 60 ? Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") : String(s);
+}
+function readCfg() {
+  const v = id => parseFloat($(id).value);
+  const c = {study: v("tStudy"), eyeAt: v("tEyeAt"), eyeLen: v("tEyeLen"), relax: v("tRelax"), water: v("tWater")};
+  const msg = $("timeMsg");
+  if ([c.study, c.eyeAt, c.eyeLen, c.relax, c.water].some(n => !isFinite(n) || n < 0) || c.study <= 0 || c.relax <= 0) {
+    msg.textContent = "Enter numbers above 0 for study and relax, and 0 or more for the eye break.";
+    return null;
+  }
+  if (c.eyeLen > 0 && c.eyeAt + c.eyeLen > c.study) {
+    msg.textContent = "The eye break must finish before the study time ends.";
+    return null;
+  }
+  msg.textContent = "Study " + label(c.study) + ", eye break at " + label(c.eyeAt) + " for " + label(c.eyeLen) + ", relax " + label(c.relax) + (c.water > 0 ? ", water every " + label(c.water) : "") + ".";
+  return c;
+}
+function saveCfg() {
+  try { localStorage.setItem("studyBuddyTimes", JSON.stringify(CFG_IDS.map(id => $(id).value))); } catch (e) {}
+}
+function loadCfg() {
+  try {
+    const a = JSON.parse(localStorage.getItem("studyBuddyTimes"));
+    if (a && a.length === 5) CFG_IDS.forEach((id, i) => { $(id).value = a[i]; });
+  } catch (e) {}
+}
+function setPreset(a) {
+  CFG_IDS.forEach((id, i) => { $(id).value = a[i]; });
+  readCfg(); saveCfg();
+}
+loadCfg(); readCfg();
+CFG_IDS.forEach(id => $(id).addEventListener("input", () => { readCfg(); saveCfg(); }));
+$("preDemo").addEventListener("click", () => setPreset([15, 5, 3, 10, 0]));
+$("preReal").addEventListener("click", () => setPreset([1500, 1200, 20, 300, 900]));
+
+/* ---------- study session ---------- */
+function toggleSession() {
+  if (phase === "idle") {
+    const c = readCfg();
+    if (!c) { $("bubble").textContent = "Fix the timing numbers first."; return; }
+    cur = c;
+    phase = "study"; t0 = performance.now(); eyeDone = false; onEye = false; nextWater = cur.water;
+    if (landmarker && !base) startCalibration();
+    say("Time to study", "study");
+  } else {
+    phase = "idle"; onEye = false;
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    $("bubble").textContent = "Study stopped. Press Button 2 to start again.";
+  }
+}
+
+function tick() {
+  const now = performance.now();
+  if (phase === "study") {
+    const e = (now - t0) / 1000;
+    if (cur.eyeLen > 0 && !eyeDone && !onEye && e >= cur.eyeAt) {
+      onEye = true; eyeDone = true; eyeEnd = now + cur.eyeLen * 1000;
+      say("Eye break", "eye");
+    }
+    if (onEye && now >= eyeEnd) { onEye = false; say("Eye break over", "eyeover"); }
+    if (cur.water > 0 && !onEye && e >= nextWater && e < cur.study - 2) {
+      nextWater += cur.water; stats.water++;
+      say("Drink some water", "water");
+    }
+    if (e >= cur.study) {
+      phase = "relax"; t0 = now; onEye = false; stats.sessions++;
+      say("Time to relax", "relax");
+      if ($("stretchOn").checked && cur.relax >= 6) {
+        setTimeout(() => {
+          if (phase === "relax") { stats.stretch++; say("Stand up and stretch your neck and shoulders", "stretch"); }
+        }, 2600);
+      }
+    }
+    $("phase").textContent = onEye ? "Eye break: look away from the screen" : "Studying";
+    $("time").textContent = onEye ? fmt((eyeEnd - now) / 1000) : fmt(cur.study - e);
+  } else if (phase === "relax") {
+    const e = (now - t0) / 1000;
+    if (e >= cur.relax) {
+      phase = "study"; t0 = now; eyeDone = false; onEye = false;
+      cur = readCfg() || cur;
+      nextWater = cur.water;
+      say("Time to study", "study");
+    }
+    $("phase").textContent = "Relax time";
+    $("time").textContent = fmt(cur.relax - e);
+  } else {
+    $("phase").textContent = landmarker ? "Ready. Press Button 2 or Space" : "Camera off";
+    $("time").textContent = "--";
+  }
+}
+function showStats() {
+  const tot = stats.goodMs + stats.badMs;
+  $("rGood").textContent = tot > 0 ? Math.round(100 * stats.goodMs / tot) + "%" : "--";
+  $("rWarn").textContent = stats.warnings;
+  $("rStreak").textContent = fmt(stats.best / 1000);
+  $("rSess").textContent = stats.sessions;
+  $("rWater").textContent = stats.water;
+  $("rStretch").textContent = stats.stretch;
+  $("rPhone").textContent = stats.phone;
+}
+$("rReset").addEventListener("click", () => { Object.keys(stats).forEach(k => { stats[k] = 0; }); });
+const ring = $("ringFg"), RING = 565.5;
+function drawRing() {
+  const now = performance.now();
+  let f = 0;
+  if (phase === "study") f = onEye ? (eyeEnd - now) / (cur.eyeLen * 1000) : 1 - (now - t0) / (cur.study * 1000);
+  else if (phase === "relax") f = 1 - (now - t0) / (cur.relax * 1000);
+  f = Math.min(1, Math.max(0, f));
+  document.body.dataset.phase = onEye ? "eye" : phase;
+  ring.style.strokeDashoffset = String(RING * (1 - f));
+}
+setInterval(() => { tick(); showStats(); drawRing(); }, 200);
+
+/* ---------- posture from the camera ---------- */
+function startCalibration() {
+  samples = []; base = null; calibUntil = performance.now() + 3000;
+  $("metrics").textContent = "Calibrating: sit straight for 3 seconds...";
+}
+
+function setBanner(on, now) {
+  $("banner").hidden = !on;
+  if (on && $("sitvoice").checked && now - lastSit > 4000) {
+    lastSit = now;
+    say("Please sit straight", "sit");
+  }
+}
+
+function draw(lm) {
+  overlay.width = video.videoWidth; overlay.height = video.videoHeight;
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  if (phoneBox) {
+    ctx.strokeStyle = "#f6c453"; ctx.lineWidth = 5;
+    ctx.strokeRect(phoneBox.originX, phoneBox.originY, phoneBox.width, phoneBox.height);
+  }
+  if (!lm) return;
+  const W = overlay.width, H = overlay.height;
+  ctx.strokeStyle = "#f6c453"; ctx.lineWidth = 4;
+  for (const [a, b] of [[11, 12], [7, 8]]) {
+    ctx.beginPath(); ctx.moveTo(lm[a].x * W, lm[a].y * H); ctx.lineTo(lm[b].x * W, lm[b].y * H); ctx.stroke();
+  }
+  ctx.fillStyle = "#14b8a6";
+  for (const i of [0, 7, 8, 11, 12]) {
+    ctx.beginPath(); ctx.arc(lm[i].x * W, lm[i].y * H, 7, 0, 7); ctx.fill();
+  }
+}
+
+function handle(res) {
+  const now = performance.now();
+  const lm = res.landmarks && res.landmarks[0];
+  draw(lm);
+  if (!lm) { $("metrics").textContent = "No person found. Sit in front of the camera."; setBanner(false, now); return; }
+  const W = video.videoWidth, H = video.videoHeight;
+  const P = i => ({x: lm[i].x * W, y: lm[i].y * H, v: lm[i].visibility === undefined ? 1 : lm[i].visibility});
+  const ls = P(11), rs = P(12), le = P(7), re = P(8);
+  if (Math.min(ls.v, rs.v, le.v, re.v) < 0.4) {
+    $("metrics").textContent = "Show your head and both shoulders to the camera.";
+    setBanner(false, now); return;
+  }
+  const sw = Math.hypot(ls.x - rs.x, ls.y - rs.y);
+  const sm = {x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2};
+  const em = {x: (le.x + re.x) / 2, y: (le.y + re.y) / 2};
+  const m = {
+    w: sw,
+    neck: (sm.y - em.y) / sw,
+    tilt: Math.atan2(ls.y - rs.y, Math.abs(ls.x - rs.x)) * 180 / Math.PI,
+    side: (em.x - sm.x) / sw
+  };
+  if (now < calibUntil) { samples.push(m); return; }
+  if (calibUntil) {
+    calibUntil = 0;
+    if (samples.length) {
+      const avg = k => samples.reduce((s, o) => s + o[k], 0) / samples.length;
+      base = {w: avg("w"), neck: avg("neck"), tilt: avg("tilt"), side: avg("side")};
+      $("bubble").textContent = "Good posture saved. Press Button 2 or Space to start studying.";
+    }
+  }
+  if (!base) { $("metrics").textContent = "Press Calibrate while sitting straight."; return; }
+  const sc = m.w / base.w, nk = m.neck / base.neck, tl = m.tilt - base.tilt, sd = m.side - base.side;
+  const bad = sc > TH.scale || nk < TH.neck || Math.abs(tl) > TH.tilt || Math.abs(sd) > TH.side;
+  $("metrics").textContent = "closer " + sc.toFixed(2) + "  head height " + nk.toFixed(2) +
+    "  shoulder tilt " + tl.toFixed(0) + "deg  sideways " + sd.toFixed(2) + (bad ? "  <- CHANGE" : "");
+  const paused = phase === "relax" || onEye;
+  const dt = lastSample ? Math.min(now - lastSample, 500) : 0;
+  lastSample = now;
+  let shown = false;
+  if (bad && !paused) {
+    if (!badSince) badSince = now;
+    shown = now - badSince > TH.holdMs;
+  } else {
+    badSince = 0;
+  }
+  if (shown && !wasShown && phase === "study") stats.warnings++;
+  wasShown = shown;
+  if (phase === "study" && !onEye) {
+    if (shown) { stats.badMs += dt; stats.streak = 0; }
+    else { stats.goodMs += dt; stats.streak += dt; stats.best = Math.max(stats.best, stats.streak); }
+  }
+  setBanner(shown, now);
+}
+
+function handleObjects(res) {
+  const now = performance.now();
+  const d = (res.detections || []).find(x => x.categories && x.categories[0] && x.categories[0].categoryName === "cell phone");
+  phoneBox = d ? d.boundingBox : null;
+  if (d && $("phoneOn").checked && phase !== "relax") {
+    if (!phoneSince) phoneSince = now;
+    const shown = now - phoneSince > 1500;
+    $("phoneBanner").hidden = !shown;
+    if (shown && now - lastPhoneWarn > 10000) {
+      lastPhoneWarn = now; stats.phone++;
+      say("Please put your phone away", "phone");
+    }
+  } else {
+    phoneSince = 0; $("phoneBanner").hidden = true;
+  }
+}
+
+function loop() {
+  if (landmarker && video.readyState >= 2) {
+    const now = performance.now();
+    if (now - lastT > 60) { lastT = now; handle(landmarker.detectForVideo(video, now)); }
+    if (objDetector && now - lastObj > 400) {
+      lastObj = now;
+      try { handleObjects(objDetector.detectForVideo(video, now)); } catch (e) {}
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+async function startCamera() {
+  $("cam").disabled = true;
+  beep("study");                         // unlocks sound in the browser
+  $("bubble").textContent = "Loading the posture model (needs internet)...";
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video: {width: 640, height: 480}});
+    video.srcObject = stream; await video.play();
+    const {PoseLandmarker, FilesetResolver, ObjectDetector} = await import(LIB + "/vision_bundle.mjs");
+    const files = await FilesetResolver.forVisionTasks(LIB + "/wasm");
+    const make = delegate => PoseLandmarker.createFromOptions(files, {
+      baseOptions: {modelAssetPath: MODEL, delegate}, runningMode: "VIDEO", numPoses: 1
+    });
+    try { landmarker = await make("GPU"); } catch (e) { landmarker = await make("CPU"); }
+    try {
+      objDetector = await ObjectDetector.createFromOptions(files, {
+        baseOptions: {modelAssetPath: OBJ_MODEL, delegate: "CPU"}, runningMode: "VIDEO", scoreThreshold: 0.4, maxResults: 5
+      });
+      $("phoneMsg").textContent = "Phone check is on.";
+    } catch (e) { $("phoneMsg").textContent = "Phone check could not start: " + e.message; }
+    $("bubble").textContent = "Sit straight. Calibrating for 3 seconds...";
+    startCalibration();
+    loop();
+  } catch (e) {
+    $("bubble").textContent = "Camera or model failed: " + e.message + ". Allow the camera and check the internet.";
+    $("cam").disabled = false;
+  }
+}
+
+/* ---------- ESP32 Button 2 over USB ---------- */
+let port = null, reader = null;
+async function connectBoard() {
+  if (!("serial" in navigator)) { $("bubble").textContent = "Use Chrome or Edge to connect the board."; return; }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({baudRate: 115200});
+  } catch (e) { $("bubble").textContent = "Could not open the port. Close the Arduino Serial Monitor first."; return; }
+  $("board").textContent = "Board connected";
+  writer = port.writable.getWriter();
+  const dec = new TextDecoderStream();
+  port.readable.pipeTo(dec.writable).catch(() => {});
+  reader = dec.readable.getReader();
+  let buf = "";
+  try {
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += value;
+      const lines = buf.split(/\r?\n/);
+      buf = lines.pop();
+      for (const l of lines) if (l.includes("BUTTON2")) toggleSession();
+    }
+  } catch (e) {}
+  try { writer.releaseLock(); } catch (e) {}
+  writer = null;
+  $("board").textContent = "Connect board";
+}
+
+/* ---------- sleep analysis ---------- */
+const SLEEP_KEY = "studyBuddySleep";
+let nights = [];
+try { nights = JSON.parse(localStorage.getItem(SLEEP_KEY)) || []; } catch (e) { nights = []; }
+$("sDate").value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const toMin = t => { const p = t.split(":").map(Number); return p[0] * 60 + p[1]; };
+const hm = m => Math.floor(m / 60) + "h " + String(Math.round(m % 60)).padStart(2, "0") + "m";
+const sleepRange = () => ($("sAge").value === "teen" ? [480, 600] : [420, 540]);
+
+function showSleep() {
+  const [lo, hi] = sleepRange();
+  const list = $("sList");
+  list.textContent = "";
+  nights.forEach(n => {
+    const row = document.createElement("div"); row.className = "srow";
+    const a = document.createElement("span"); a.textContent = n.d.slice(5);
+    const bar = document.createElement("span"); bar.className = "bar";
+    const fill = document.createElement("i");
+    fill.className = n.mins < lo ? "low" : n.mins > hi ? "high" : "ok";
+    fill.style.width = Math.min(100, n.mins / 720 * 100) + "%";
+    bar.appendChild(fill);
+    const c = document.createElement("span"); c.textContent = hm(n.mins);
+    row.append(a, bar, c);
+    list.appendChild(row);
+  });
+  const out = $("sResult");
+  if (!nights.length) { out.textContent = "Add last night's sleep to see your analysis."; return; }
+  const last = nights[nights.length - 1];
+  const rec = (lo / 60) + " to " + (hi / 60) + " hours";
+  const avg = nights.reduce((s, n) => s + n.mins, 0) / nights.length;
+  const debt = nights.reduce((s, n) => s + Math.max(0, lo - n.mins), 0);
+  const beds = nights.map(n => { const m = toMin(n.bed); return m < 720 ? m + 1440 : m; });
+  const spread = Math.max(...beds) - Math.min(...beds);
+  let text = "Last night: " + hm(last.mins) + ". ";
+  if (last.mins < lo) text += "That is below the recommended " + rec + ". Try to sleep earlier tonight, keep screens away 30 minutes before bed, and avoid late caffeine. A 20-minute nap can help, but not late in the evening.";
+  else if (last.mins > hi) text += "That is above the usual " + rec + ". If you often sleep this long and still feel tired, keep a steady schedule and talk to a doctor if it continues.";
+  else text += "That is within the recommended " + rec + ". Keep your bed and wake times steady.";
+  text += " Average of " + nights.length + " night" + (nights.length > 1 ? "s" : "") + ": " + hm(avg) + ".";
+  if (debt > 0) text += " Sleep missing from the minimum: " + hm(debt) + ".";
+  if (nights.length > 2 && spread > 90) text += " Your bed time changes by about " + hm(spread) + "; a steady bed time helps sleep quality.";
+  text += " This is a general guide, not medical advice.";
+  out.textContent = text;
+}
+
+$("sAdd").addEventListener("click", () => {
+  if (!$("sBed").value || !$("sWake").value) { $("sResult").textContent = "Enter your bed time and wake time."; return; }
+  let mins = toMin($("sWake").value) - toMin($("sBed").value);
+  if (mins <= 0) mins += 1440;
+  if (mins > 16 * 60) { $("sResult").textContent = "That is over 16 hours. Please check your bed and wake times."; return; }
+  const d = $("sDate").value || "0000-00-00";
+  nights = nights.filter(n => n.d !== d);
+  nights.push({d, bed: $("sBed").value, wake: $("sWake").value, mins});
+  nights.sort((x, y) => (x.d < y.d ? -1 : 1));
+  nights = nights.slice(-7);
+  try { localStorage.setItem(SLEEP_KEY, JSON.stringify(nights)); } catch (e) {}
+  showSleep();
+});
+$("sClear").addEventListener("click", () => { nights = []; try { localStorage.removeItem(SLEEP_KEY); } catch (e) {} showSleep(); });
+$("sAge").addEventListener("change", showSleep);
+showSleep();
+
+$("cam").addEventListener("click", startCamera);
+$("study").addEventListener("click", toggleSession);
+$("calib").addEventListener("click", () => { if (landmarker) startCalibration(); });
+$("board").addEventListener("click", connectBoard);
+$("test").addEventListener("click", () => say("Time to study", "study"));
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && !["BUTTON", "INPUT", "SELECT"].includes(e.target.tagName)) { e.preventDefault(); toggleSession(); }
+});
+</script>
+</body>
+</html>
